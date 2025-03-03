@@ -7,95 +7,92 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
+
 'version 2025.0303
-
 ' Class module for product operations
-
 ' Public Class Product_Module
 
-'
+Option Explicit
+Public Prd2wt
+Public all_rows_data As Variant
+Public counter As Long
 
-
-
+Public rootPrd
 
 Private i  As Integer
+Private bdict  As Object
 
-Private bDict  As Object
-
-Private rootPrd
-
-Option Explicit
-
-
+Private oSel
+Private imsg
+Private att(10)
+Private aType(10)
 
 Sub init()
+    On Error Resume Next
+        Set rootPrd = CATIA.ActiveDocument.Product
+        Set oSel = CATIA.ActiveDocument.Selection
+            oSel.Clear
+        If Error.Number <> 0 Then
+            imsg = "请打开产品文档"
+         MsgBox imsg
+        End If
+    On Error GoTo 0
+    
+        att(1) = "iMaterial"
+        att(2) = "iDensity"
+        att(3) = "iMass"
+        att(4) = "iDensity"
+        att(5) = "iThickness"
 
-if
-
-Set rootPrd = CATIA.ActiveDocument.Product
-
-
-
+        aType(1) = "String"
+        aType(2) = "Density"
+        aType(3) = "String"
+        aType(3) = "Mass"
+        aType(3) = "Length"
 End Sub
 
-
-
-
-Function whois2rv()
-   '获取要读取或修改的  全局变量 Prd2wt 定义
-    Dim infobox: infobox = MsgBox("“是”选择产品，“否”读取根产品，“取消退出”", vbYesNoCancel + vbDefaultButton2, "请选择产品")
-        Select Case infobox
-        Case 6  '===选择“是”,进行产品选择====
-           On Error Resume Next
-           Set whois2rv = selPrd()
-           If Err.Number <> 0 Then
-           Err.Clear
-           Exit Function
-           End If
-        Case 7: Set whois2rv = CATIA.ActiveDocument.Product '===选择“否”====
-        Case 2: Exit Function '===选择“取消”====
+Public Function whois2rv()    '获取要读取或修改的  全局变量 Prd2wt 定义
+     imsg = MsgBox("“是”选择产品，“否”读取根产品，“取消退出”", vbYesNoCancel + vbDefaultButton2, "请选择产品")
+        Select Case imsg
+            Case 7: Set whois2rv = rootPrd '===选择“否”====
+            Case 2: Exit Function '===选择“取消”====
+            Case 6  '===选择“是”,进行产品选择====
+                On Error Resume Next
+                    Set whois2rv = selPrd()
+                If Err.Number <> 0 Then
+                    Err.Clear
+                    Exit Function
+                End If
         End Select
         If Not whois2rv Is Nothing Then
-           infobox = "你选择的产品是" & whois2rv.PartNumber & "是否继续"
-          MsgBox infobox
+           imsg = "你选择的产品是" & whois2rv.PartNumber & "是否继续"
+          MsgBox imsg
         End If
-           
+End Function
+
+Public Function selPrd()
+   Dim status, iType(0)
+   CATIA.ActiveWindow.WindowState = 0
+   oSel.Clear
+    iType(0) = "Product"
+    If oSel.Count2 = 0 Then
+        MsgBox "请选择要读取的产品"
+        status = oSel.SelectElement2(iType, "请选择要读取的产品", False)
+        'status = oSel.SelectElement3(iType, "请选择要读取的产品", True, 2, False)
+    End If
+    If status = "Cancel" Then
+        Exit Function
+    End If
+    If status = "Normal" And oSel.Count2 = 1 Then
+            Set selPrd = oSel.Item(1).LeafProduct.ReferenceProduct
+            oSel.Clear
+    Else
+        MsgBox "请只选择一个产品"
+        Exit Function
+    End If
 End Function
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    ' Recursively process products and write information to Excel
-    Public Sub recurPrd(oPrd, xlsht, oRowNb, LV)
-        Dim bDict, i
-        Arry2sht bomRowPrd(oPrd, LV), xlsht, oRowNb
-        If oPrd.Products.Count > 0 Then ' I
-            Set bDict = CreateObject("Scripting.Dictionary")
-            For i = 1 To oPrd.Products.Count
-                If Not bDict.Exists(oPrd.Products.Item(i).PartNumber) Then
-                    bDict(oPrd.Products.Item(i).PartNumber) = 1
-                    oRowNb = oRowNb + 1
-                    recurPrd oPrd.Products.Item(i), xlsht, oRowNb, LV + 1
-                End If
-            Next
-        End If
-    End Sub
 
     ' Calculate the total mass of a product and its sub-products
     Public Function Assmass(oPrd)
@@ -114,118 +111,120 @@ End Function
         Assmass = total
     End Function
 
-    ' Generate a BOM row for a product
-    Public Function bomRowPrd(oPrd, LV)
-        Dim oDict, QTy
-        QTy = 1
-        If TypeOf oPrd.Parent Is Products Then ' If the product has a parent product
-            Set oDict = Dictbros(oPrd.Parent.Parent)
-            QTy = oDict(oPrd.PartNumber) ' Get the quantity of the product
-        End If
-        bomRowPrd = Array(LV, attDefault(oPrd), QTy, attUsp(oPrd))
-    End Function
 
     ' Generate product information
     Public Function infoPrd(oPrd)
-        Dim LV, QTy: LV = 0: QTy = 0
-        infoPrd = Array(LV, attDefault(oPrd), QTy, attUsp(oPrd))
+        Dim arr(10)
+            With oPrd.ReferenceProduct
+                arr(1) = .PartNumber
+                arr(2) = .Nomenclature
+                arr(3) = .Definition
+                arr(4) = oPrd.Name
+            End With
+        Dim usrp
+           Set usrp = oPrd.ReferenceProduct.UserRefProperties
+                arr(5) = getAtt("iMass", usrp)(1)
+                arr(6) = getAtt("iMaterial", usrp)(1)
+                arr(7) = getAtt("iThickness", usrp)(1)
+        On Error Resume Next
+           Set usrp = oPrd.ReferenceProduct.Parent.part.parameters.RootParameterSet.ParameterSets.Item("cm").DirectParameters
+                arr(8) = getAtt("iDensity", usrp)(1)
+            If Error.Number <> 0 Then
+                arr(8) = "__"
+            End If
+        On Error GoTo 0
+                arr(9) = meQty(oPrd)
+        infoPrd = arr()
     End Function
 
-    ' Get default attributes of a product
-    Public Function attDefault(oPrd)
-        With oPrd.ReferenceProduct
-            Dim att_default(1 To 4)
-            att_default(1) = .PartNumber
-            att_default(2) = .Nomenclature
-            att_default(3) = .Definition
-            att_default(4) = oPrd.Name
-            attDefault = att_default
-        End With
-    End Function
 
-    ' Get user-defined attributes of a product
-    Public Function attUsp(oPrd)
-        Dim refprd: Set refprd = oPrd.ReferenceProduct
-        Dim i, colls
-        Dim att_usp(2 To 5)
-        For i = 2 To 5
-            Select Case i
-                Case 2, 4, 5
-                    Set colls = refprd.UserRefProperties
-                    att_usp(i) = thisParameterValue(colls, att_usp_Names(i))
-                    Set colls = Nothing
-                Case 3
-                    On Error Resume Next
-                    Dim oPrt
-                    Set oPrt = refprd.Parent.Part
-                    Set colls = oPrt.Parameters.RootParameterSet.ParameterSets.Item("cm").DirectParameters
-                    att_usp(i) = thisParameterValue(colls, att_usp_Names(i))
-                    Set colls = Nothing
-                    If Err.Number <> 0 Then
-                        att_usp(i) = "N\A"
-                        Err.Clear ' Handle non-part cases, cases without "cm", and cases without parameters
-                    End If
-                    On Error GoTo 0
-            End Select
+
+Private Function getAtt(itemName, collection)
+
+    Dim arr(1) ' 正确声明数组
+    On Error Resume Next
+        Set arr(0) = collection.Item(itemName)
+        If Err.Number = 0 Then ' 检查是否成功获取对象
+            arr(1) = arr(0).Value
+            getAtt = arr
+        Else
+            getAtt = Array(Nothing, "__")
+        End If
+    On Error GoTo 0
+End Function
+
+Function meQty(oPrd)
+    Dim parentPrd, oDict
+    Dim i, pn, Qty
+    On Error Resume Next      ' 检查 oPrd 是否为根产品
+        Set parentPrd = oPrd.Parent.Parent
+        If (parentPrd Is Nothing) Or (TypeName(parentPrd) = "ProductDocument") Then
+            Qty = 1 ' 是根产品，数量设为 1
+        Else
+            Set oDict = CreateObject("Scripting.Dictionary")        ' 不是根产品，获取兄弟字典
+            For i = 1 To parentPrd.Products.Count
+                pn = parentPrd.Products.Item(i).PartNumber
+                If oDict.Exists(pn) Then
+                    oDict(pn) = oDict(pn) + 1
+                Else
+                    oDict(pn) = 1
+                End If
+            Next
+            Qty = oDict(oPrd.PartNumber) ' 从兄弟字典中获取 oPrd 的数量
+        End If
+    On Error GoTo 0
+    meQty = Qty
+End Function
+
+
+
+
+' 全局变量声明
+
+
+Public Function recurPrd(ByVal oPrd As Object, ByVal LV As Integer) As Variant
+    If all_rows_data Is Nothing Then
+        ReDim all_rows_data(0 To 0, 0 To 0)
+        counter = 0
+    End If
+     counter = counter + 1
+    Dim row_data(), oarr()
+        oarr = infoPrd(oPrd) ' 假设 infoPrd 函数已经定义
+        ReDim row_data(0 To UBound(oarr) + 2)
+        row_data(0) = counter
+        row_data(1) = LV
+        Dim i As Integer
+        For i = 0 To UBound(oarr)
+            row_data(i + 2) = oarr(i)
         Next
-        attUsp = att_usp
-    End Function
 
-    ' Get a dictionary of sibling products
-    Public Function Dictbros(oPrd)
-        Dim oDict, i, pn: Set oDict = CreateObject("Scripting.Dictionary")
-        For i = 1 To oPrd.Products.Count
-            pn = oPrd.Products.Item(i).PartNumber
-            If oDict.Exists(pn) Then
-                oDict(pn) = oDict(pn) + 1
-            Else
-                oDict(pn) = 1
+    Dim new_index
+    If Not IsEmpty(all_rows_data) Then
+        new_index = UBound(all_rows_data, 1) + 1
+        ReDim Preserve all_rows_data(0 To new_index, 0 To UBound(row_data))
+    Else
+        new_index = 0
+        ReDim all_rows_data(0 To new_index, 0 To UBound(row_data))
+    End If
+    For i = 0 To UBound(row_data)
+        all_rows_data(new_index, i) = row_data(i)
+    Next i
+    
+    ' 递归处理子产品
+    If oPrd.Products.Count > 0 Then
+        Dim bdict As Object
+        Set bdict = CreateObject("Scripting.Dictionary")
+        Dim idx As Integer
+        For idx = 1 To oPrd.Products.Count
+            Dim child As Object
+            Set child = oPrd.Products.Item(idx)
+            Dim pn As String
+            pn = child.PartNumber
+            If Not bdict.Exists(pn) Then
+                bdict.Add pn, 1
+                recurPrd = recurPrd(child, LV + 1)
             End If
         Next
-        Set Dictbros = oDict
-    End Function
-
-    ' Check if a collection has a specific parameter
-    Public Function hasAtt(colls, parameterName)
-        Dim propertyItem
-        On Error Resume Next
-        Set propertyItem = colls.Item(parameterName)
-        If Err.Number <> 0 Then
-            Err.Clear
-            hasAtt = False
-        Else
-            hasAtt = True
-        End If
-        On Error GoTo 0
-    End Function
-
-    ' Get the value of a specific parameter in a collection
-    Public Function thisParameterValue(colls, parameterName)
-        On Error Resume Next
-        thisParameterValue = colls.Item(parameterName).Value
-        If Err.Number <> 0 Then
-            Err.Clear
-            thisParameterValue = "N\A"
-        End If
-        On Error GoTo 0
-    End Function
-
-l Key As String) As Boolean
-    ExistsKey = IIf(InStr(LCase(txt), LCase(Key)) > 0, True, False)
+    End If
+    recurPrd = all_rows_data
 End Function
-
-' 检查是否为字符串数组
-Private Function IsStringAry(ByVal ary As Variant) As Boolean
-    IsStringAry = False
-    
-    If Not IsArray(ary) Then Exit Function
-    Dim i&
-    For i = 0 To UBound(ary)
-        If Not VarType(ary(i)) = vbString Then Exit Function
-    Next
-    
-    IsStringAry = True
-End Function
-
-' 检查过滤器类型是否有效
-Private Function IsFilterType(ByVal ary As Variant

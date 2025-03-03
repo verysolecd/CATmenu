@@ -1,6 +1,20 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "Class_XLM"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = False
+Attribute VB_Exposed = False
+'version 2025.0303
+' Class module for excel operations
+' Public Class XLm
+
+
 Option Explicit
 ' 定义私有变量来存储 Excel 应用程序对象和工作表对象
-Private xlApp, wb, ws
+Public xlApp, wb, ws
 Private head_bom As Variant
 Private head_rv As Variant
 Private inject_cols As Variant
@@ -8,40 +22,45 @@ Private extract_cols As Variant
 Private bom_cols As Variant
 Private startRow As Variant
 ' 初始化类的方法
-Public Sub Initialize()
+Public Sub init()
    On Error Resume Next
+    If xlApp Is Nothing Then
         Set xlApp = CreateObject("Excel.Application")
         xlApp.Visible = True
+    End If
+    If wb Is Nothing Then
         Set wb = xlApp.Workbooks.Add
+    End If
         Set ws = wb.ActiveSheet  ' 获取sheet1
         ws.Name = "bom"
-        If Err.Number <> 0 Then
-            Exit Sub
-        End If
+    If Err.Number <> 0 Then
+        Err.Clear
+    End If
     On Error GoTo 0
-head_rv = Array("Part Number", "Description", "Quantity", "Level")
-inject_cols = Array(2, 4, 6, 12, 12, 8, 13, 10)
-extract_cols = Array(1, 3, 5, 7, 9, 11)
-bom_cols = Array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
-head_bom = Array( _
-"No." & Chr(10) & "编号", _
-"Layout" & Chr(10) & "层级", _
-"PN" & Chr(10) & "零件号", _
-"Nomenclature" & Chr(10) & "英文名称", _
-"Definition" & Chr(10) & "中文名称", _
-"Picture" & Chr(10) & "图像", _
-"Quantity" & Chr(10) & "数量(PCS)", _
-"Weight" & Chr(10) & "单质量", _
-"Material" & Chr(10) & "材料", _
-"Thickness" & Chr(10) & "厚度(mm)", _
-"Density" & Chr(10) & "密度" _
-    )
-startRow = 2
+    head_rv = Array("Part Number", "Description", "Quantity", "Level")
+    inject_cols = Array(2, 4, 6, 12, 12, 8, 13, 10)
+    extract_cols = Array(1, 3, 5, 7, 9, 11)
+    bom_cols = Array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
+    
+    head_bom = Array( _
+    "No." & Chr(10) & "编号", _
+    "Layout" & Chr(10) & "层级", _
+    "PN" & Chr(10) & "零件号", _
+    "Nomenclature" & Chr(10) & "英文名称", _
+    "Definition" & Chr(10) & "中文名称", _
+    "Picture" & Chr(10) & "图像", _
+    "Quantity" & Chr(10) & "数量(PCS)", _
+    "Weight" & Chr(10) & "单质量", _
+    "Material" & Chr(10) & "材料", _
+    "Thickness" & Chr(10) & "厚度(mm)", _
+    "Density" & Chr(10) & "密度" _
+        )
+    startRow = 2
 End Sub
 Public Sub clear_table()
     ws.UsedRange.ClearContents
-end sub
-Public Sub inject_data(rowNumber As Long, data As Variant, iType)
+End Sub
+Public Sub inject_data(rowNumber, data, iType)
     Dim maxCol As Long
     Dim outputArr As Variant
     Dim i As Long
@@ -72,8 +91,8 @@ Public Sub inject_data(rowNumber As Long, data As Variant, iType)
     Next i
     ws.Range(ws.Cells(rowNumber, 1), ws.Cells(rowNumber, maxCol)).Value = outputArr
 End Sub
-Sub set_Header(header As Variant)
-    Dim lastCol As Long
+Sub set_Header(header)
+    Dim lastCol
     lastCol = UBound(header) - LBound(header) + 1
     With ws
     .Range(.Cells(1, 1), .Cells(1, lastCol)).Value = header
@@ -115,3 +134,5 @@ Public Sub lvmg()
         End If
     Next
 End Sub
+
+
