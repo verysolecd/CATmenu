@@ -124,17 +124,13 @@ Try_TAG_ENTRY_DEF:
             End If
         End If
         If CanExecMethod = vbNullString Then GoTo Continue
-        Set MdlInfo = Push_Dic(MdlInfo, TAG_ENTRYPNT, CanExecMethod)
-        
+        Set MdlInfo = Push_Dic(MdlInfo, TAG_ENTRYPNT, CanExecMethod)        
         Set MdlInfo = Push_Dic(MdlInfo, TAG_PJTPATH, PjtPath)
-        Set MdlInfo = Push_Dic(MdlInfo, TAG_MDLNAME, Mdl.Name)
-        
+        Set MdlInfo = Push_Dic(MdlInfo, TAG_MDLNAME, Mdl.Name)        
         BtnInfos.Add MdlInfo
 Continue:
-    Next
-    
-    If BtnInfos.Count < 1 Then Exit Function
-    
+    Next    
+    If BtnInfos.Count < 1 Then Exit Function    
     Set Get_ButtonInfo = BtnInfos
 End Function
 ' 向字典中添加或更新键值对
